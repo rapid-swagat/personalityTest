@@ -1,0 +1,179 @@
+html,
+body {
+  min-height: 100%;
+}
+
+.titleCen {
+  margin-top: 20%;
+  font-weight: bold;
+  font-size: x-large;
+}
+
+body,
+div,
+form,
+input,
+p {
+  padding: 0;
+  margin: 0;
+  outline: none;
+  font-family: Roboto, Arial, sans-serif;
+  font-size: 14px;
+  color: #666;
+  line-height: 22px;
+}
+
+h1 {
+  font-weight: 400;
+}
+
+.spinner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 10px;
+}
+
+.testbox {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: inherit;
+  padding: 3px;
+}
+
+input:checked + .radio__control::before {
+  transform: scale(1);
+}
+
+form {
+  width: 100%;
+  padding: 20px;
+  background: #fff;
+  box-shadow: 0 2px 5px #ccc;
+}
+
+input {
+  width: calc(100% - 10px);
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+input:hover,
+textarea:hover {
+  outline: none;
+  border: 1px solid #095484;
+}
+
+th,
+td {
+  width: 18%;
+  padding: 15px 0;
+  border-bottom: 1px solid #ccc;
+  text-align: center;
+  /* vertical-align: unset; */
+  line-height: 18px;
+  font-weight: 400;
+  word-break: break-all;
+}
+
+.first-col {
+  width: 16%;
+  text-align: left;
+}
+
+table {
+  width: 100%;
+}
+
+/* .table-data {
+  margin-top: 10%;
+} */
+
+.question {
+  padding: 15px 0 5px;
+  color: #095484;
+}
+
+.question-answer input {
+  width: auto;
+}
+
+.btn-block {
+  margin-top: 20px;
+  text-align: center;
+}
+
+input[type="radio"]:hover {
+  cursor: pointer;
+}
+
+.radio1,
+.label {
+  width: 0.5em;
+  height: 0.5em;
+}
+
+.radio2,
+.label {
+  width: 0.75em;
+  height: 0.75em;
+}
+
+.radio3,
+.label {
+  width: 1em;
+  height: 1em;
+}
+
+.radio4,
+.label {
+  width: 1.5em;
+  height: 1.5em;
+}
+
+button {
+  width: 150px;
+  padding: 10px;
+  border: none;
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+  background-color: #095484;
+  font-size: 16px;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0666a3;
+}
+
+.options {
+  width: 20%;
+  padding: 15px 0;
+  text-align: center;
+  vertical-align: unset;
+  line-height: 18px;
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.question {
+  text-align: center;
+  font-size: 18px;
+}
+
+@media (min-width: 568px) {
+  th,
+  td {
+    word-break: keep-all;
+  }
+}
