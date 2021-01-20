@@ -8,340 +8,415 @@ import { Spinner, SpinnerSize, Overlay } from "office-ui-fabric-react";
 class Form extends Component {
   constructor(props) {
     super(props);
-    this.state = { questions: [], answers: [], pause: false, pause2: false };
+    this.state = {
+      questions: [],
+      answers: [],
+      pause: false,
+      pause2: false,
+      user_id: 0,
+      personality_id: 0,
+      personality_existence: false,
+    };
   }
+
+  checkTraitIndex = (filtered, traitStep, traitNum) => {
+    let dataCheck = filtered.filter((data) => {
+      return data.QuesIndex == traitStep && data.trait_number == traitNum;
+    });
+    return dataCheck;
+  };
 
   async componentDidMount() {
     this.setState({ pause: true });
     let name = this.props.location.state.token;
-    let checkFlag = 1;
-    let profUser = await axios({
+    let userData = await axios({
       method: "GET",
-      url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/ProfileUsers/All/items`,
+      url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Principals/All/items`,
       headers: {
         Authorization: "Bearer " + this.props.location.state.name,
       },
     });
-    let prof = profUser.data.value;
-    let existingUser = prof.filter(function (el) {
-      return el.name == name;
+
+    let idUser = userData.data.value.filter((data) => {
+      return data.display_name == name;
+    });
+    let userID = idUser[0].id;
+
+    let personalityProfData = await axios({
+      method: "GET",
+      url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Personality%20Profiles/All/items`,
+      headers: {
+        Authorization: "Bearer " + this.props.location.state.name,
+      },
     });
 
-    if (existingUser.length) {
-      let arrDate = [];
-      for (let i = 0; i < existingUser.length; i++) {
-        arrDate.push(existingUser[i].answer_date);
-      }
-      arrDate.sort();
-      let da = arrDate[arrDate.length - 1];
+    let profDataExistence = personalityProfData.data.value.filter((data) => {
+      return data.user_id == userID;
+    });
+
+    if (profDataExistence.length) {
+      let checkFlag = 1;
+      let profUser = await axios({
+        method: "GET",
+        url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/ProfileUsers/All/items`,
+        headers: {
+          Authorization: "Bearer " + this.props.location.state.name,
+        },
+      });
+      let prof = profUser.data.value;
+      let existingUser = prof.filter(function (el) {
+        return el.name == name;
+      });
+
+      let questionNumber = 1,
+        personalityID = 9;
+
+      let profileData = await axios({
+        method: "GET",
+        url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists//Personality%20Profiles/All/items`,
+        headers: {
+          Authorization: "Bearer " + this.props.location.state.name,
+        },
+      });
+
+      let profExisiting = profileData.data.value.filter(function (el) {
+        return el.user_id == userID;
+      });
+
+      let dataRes = await axios({
+        method: "GET",
+        url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists//Personality%20Profiles/items/${profExisiting[0].id}`,
+        headers: {
+          Authorization: "Bearer " + this.props.location.state.name,
+        },
+      });
+      let createdDate = dataRes.data.created;
+      personalityID = dataRes.data.id;
+      //  date = new Date(2020, 0, 5);
       let date = new Date();
-      let diffTime = new Date(da).getTime() - date.getTime();
+      let diffTime = new Date(createdDate).getTime() - date.getTime();
       let diffDays = Math.abs(diffTime / 86400000);
+      if (diffDays / 365 >= 1) questionNumber = 7;
 
-      if (diffDays <= 7) {
-        this.setState({ questions: "no", pause: false });
-        checkFlag = 0;
+      if (existingUser.length) {
+        questionNumber = 1;
+        let arrDate = [];
+        for (let i = 0; i < existingUser.length; i++) {
+          arrDate.push(existingUser[i].answer_date);
+        }
+        arrDate.sort();
+        let da = arrDate[arrDate.length - 1];
+        let date = new Date();
+        let diffTime = new Date(da).getTime() - date.getTime();
+        let diffDays = Math.abs(diffTime / 86400000);
+
+        if (diffDays <= 7) {
+          this.setState({ questions: "no", pause: false });
+          checkFlag = 0;
+        }
+      } else {
+        questionNumber = 7;
       }
-    }
 
-    if (checkFlag) {
-      let link = "lists/Questions/All/items";
-      let flag = 0;
-      let traitStep1,
-        traitStep2,
-        traitStep3,
-        traitStep4,
-        traitStep5,
-        traitStep6,
-        traitStep7;
-      let questionData = [];
-      do {
-        await axios
-          .get(
+      if (checkFlag) {
+        let link = "lists/Questions/All/items";
+        let flag = 0;
+        let traitStep1,
+          traitStep2,
+          traitStep3,
+          traitStep4,
+          traitStep5,
+          traitStep6,
+          traitStep7,
+          res;
+        let questionData = [];
+        do {
+          res = await axios.get(
             `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/${link}`,
             {
               headers: {
                 Authorization: "Bearer " + this.props.location.state.name,
               },
             }
-          )
-          .then((res) => {
-            questionData = questionData.concat(res.data.value);
-            if (res.data["@odata.nextLink"] !== undefined)
-              link = res.data["@odata.nextLink"];
-            else flag = 1;
-          });
-      } while (flag == 0);
+          );
 
-      let group1 = questionData.reduce((r, a) => {
-        r[a.trait_id] = [...(r[a.trait_id] || []), a];
-        return r;
-      }, {});
+          questionData = questionData.concat(res.data.value);
+          if (res.data["@odata.nextLink"] !== undefined)
+            link = res.data["@odata.nextLink"];
+          else flag = 1;
+        } while (flag === 0);
 
-      link = "lists/Traits/All/items";
-      let allTraitData = [];
-      flag = 0;
-      do {
-        await axios
-          .get(
+        let group1 = questionData.reduce((r, a) => {
+          r[a.trait_id] = [...(r[a.trait_id] || []), a];
+          return r;
+        }, {});
+
+        link = "lists/Traits/All/items";
+        let allTraitData = [];
+        flag = 0;
+        do {
+          res = await axios.get(
             `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/${link}`,
             {
               headers: {
                 Authorization: "Bearer " + this.props.location.state.name,
               },
             }
-          )
-          .then((res) => {
-            allTraitData = allTraitData.concat(res.data.value);
-            if (res.data["@odata.nextLink"] !== undefined)
-              link = res.data["@odata.nextLink"];
-            else flag = 1;
-          });
-      } while (flag == 0);
+          );
+          allTraitData = allTraitData.concat(res.data.value);
+          if (res.data["@odata.nextLink"] !== undefined)
+            link = res.data["@odata.nextLink"];
+          else flag = 1;
+        } while (flag === 0);
 
-      let data = allTraitData;
+        let data = allTraitData;
 
-      let filtered = data.filter(function (el) {
-        return el.user_name == name;
-      });
+        let filtered = data.filter(function (el) {
+          return el.user_name == name;
+        });
 
-      let dataCheck;
-      //trait1
-      traitStep1 = parseInt(Math.random() * (group1[1].length - 8) + 0);
+        let dataCheck;
+        //trait1
+        traitStep1 = parseInt(Math.random() * (group1[1].length - 8) + 0);
 
-      let existingTrait1 = filtered.filter(function (el) {
-        return el.trait_number == 1;
-      });
+        let existingTrait1 = filtered.filter(function (el) {
+          return el.trait_number == 1;
+        });
 
-      if (existingTrait1.length > group1[1].length - 9) {
-        for (let q = 0; q < existingTrait1.length; q++) {
-          let itemID = existingTrait1[q]["id"];
-          await axios({
-            method: "DELETE",
-            url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
+        if (existingTrait1.length > group1[1].length - 9) {
+          for (let q = 0; q < existingTrait1.length; q++) {
+            let itemID = existingTrait1[q]["id"];
+            await axios({
+              method: "DELETE",
+              url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
+              headers: {
+                Authorization: "Bearer " + this.props.location.state.name,
+              },
+            });
+          }
+        } else {
+          while (1) {
+            traitStep1 = parseInt(Math.random() * (group1[1].length - 8) + 0);
+            dataCheck = this.checkTraitIndex(filtered, traitStep1, 1);
+            if (!dataCheck.length) break;
+          }
+        }
+
+        //trait2
+        traitStep2 = parseInt(Math.random() * (group1[2].length - 8) + 0);
+        let existingTrait2 = filtered.filter(function (el) {
+          return el.trait_number == 2;
+        });
+
+        if (traitStep2.length > group1[2].length - 9) {
+          for (let q = 0; q < existingTrait2.length; q++) {
+            let itemID = existingTrait2[q]["id"];
+            await axios({
+              method: "DELETE",
+              url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
+              headers: {
+                Authorization: "Bearer " + this.props.location.state.name,
+              },
+            });
+          }
+        } else {
+          while (1) {
+            traitStep2 = parseInt(Math.random() * (group1[2].length - 8) + 0);
+            dataCheck = this.checkTraitIndex(filtered, traitStep2, 2);
+            if (!dataCheck.length) break;
+          }
+        }
+
+        //trait3
+        traitStep3 = parseInt(Math.random() * (group1[3].length - 8) + 0);
+        let existingTrait3 = filtered.filter(function (el) {
+          return el.trait_number == 3;
+        });
+
+        if (traitStep3.length > group1[3].length - 9) {
+          for (let q = 0; q < existingTrait3.length; q++) {
+            let itemID = existingTrait3[q]["id"];
+            await axios({
+              method: "DELETE",
+              url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
+              headers: {
+                Authorization: "Bearer " + this.props.location.state.name,
+              },
+            });
+          }
+        } else {
+          while (1) {
+            traitStep3 = parseInt(Math.random() * (group1[3].length - 8) + 0);
+            dataCheck = this.checkTraitIndex(filtered, traitStep3, 3);
+            if (!dataCheck.length) break;
+          }
+        }
+
+        //trait4
+        traitStep4 = parseInt(Math.random() * (group1[4].length - 8) + 0);
+        let existingTrait4 = filtered.filter(function (el) {
+          return el.trait_number == 4;
+        });
+
+        if (traitStep4.length > group1[4].length - 9) {
+          for (let q = 0; q < existingTrait4.length; q++) {
+            let itemID = existingTrait4[q]["id"];
+            await axios({
+              method: "DELETE",
+              url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
+              headers: {
+                Authorization: "Bearer " + this.props.location.state.name,
+              },
+            });
+          }
+        } else {
+          while (1) {
+            traitStep4 = parseInt(Math.random() * (group1[4].length - 8) + 0);
+            dataCheck = this.checkTraitIndex(filtered, traitStep4, 4);
+            if (!dataCheck.length) break;
+          }
+        }
+
+        //trait5
+        traitStep5 = parseInt(Math.random() * (group1[5].length - 8) + 0);
+        let existingTrait5 = filtered.filter(function (el) {
+          return el.trait_number == 5;
+        });
+
+        if (traitStep5.length > group1[5].length - 9) {
+          for (let q = 0; q < existingTrait5.length; q++) {
+            let itemID = existingTrait5[q]["id"];
+            await axios({
+              method: "DELETE",
+              url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
+              headers: {
+                Authorization: "Bearer " + this.props.location.state.name,
+              },
+            });
+          }
+        } else {
+          while (1) {
+            traitStep5 = parseInt(Math.random() * (group1[5].length - 8) + 0);
+            dataCheck = this.checkTraitIndex(filtered, traitStep5, 5);
+            if (!dataCheck.length) break;
+          }
+        }
+
+        //trait6
+        traitStep6 = parseInt(Math.random() * (group1[6].length - 8) + 0);
+
+        let existingTrait6 = filtered.filter(function (el) {
+          return el.trait_number == 6;
+        });
+
+        if (traitStep6.length > group1[6].length - 9) {
+          for (let q = 0; q < existingTrait6.length; q++) {
+            let itemID = existingTrait6[q]["id"];
+            await axios({
+              method: "DELETE",
+              url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
+              headers: {
+                Authorization: "Bearer " + this.props.location.state.name,
+              },
+            });
+          }
+        } else {
+          while (1) {
+            traitStep6 = parseInt(Math.random() * (group1[6].length - 8) + 0);
+            dataCheck = this.checkTraitIndex(filtered, traitStep6, 6);
+            if (!dataCheck.length) break;
+          }
+        }
+
+        //trit7
+        traitStep7 = parseInt(Math.random() * (group1[7].length - 8) + 0);
+        let existingTrait7 = filtered.filter(function (el) {
+          return el.trait_number == 7;
+        });
+
+        if (traitStep7.length > group1[7].length - 9) {
+          for (let q = 0; q < existingTrait7.length; q++) {
+            let itemID = existingTrait7[q]["id"];
+            await axios({
+              method: "DELETE",
+              url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
+              headers: {
+                Authorization: "Bearer " + this.props.location.state.name,
+              },
+            });
+          }
+        } else {
+          while (1) {
+            traitStep7 = parseInt(Math.random() * (group1[7].length - 8) + 0);
+            dataCheck = this.checkTraitIndex(filtered, traitStep7, 7);
+            if (!dataCheck.length) break;
+          }
+        }
+
+        let questionAsked = [];
+        let questions = [];
+        for (let i = 0; i < questionNumber; i++) {
+          questions.push(group1[1][traitStep1]);
+          questions.push(group1[2][traitStep2]);
+          questions.push(group1[3][traitStep3]);
+          questions.push(group1[4][traitStep4]);
+          questions.push(group1[5][traitStep5]);
+          questions.push(group1[6][traitStep6]);
+          questions.push(group1[7][traitStep7]);
+          traitStep1 = traitStep1 + 3;
+          if (traitStep1 > group1[1].length - 1) traitStep1 = 0;
+          traitStep2 = traitStep2 + 3;
+          if (traitStep2 > group1[2].length - 1) traitStep2 = 0;
+          traitStep3 = traitStep3 + 3;
+          if (traitStep3 > group1[3].length - 1) traitStep3 = 0;
+          traitStep4 = traitStep4 + 3;
+          if (traitStep4 > group1[4].length - 1) traitStep4 = 0;
+          traitStep5 = traitStep5 + 3;
+          if (traitStep5 > group1[5].length - 1) traitStep5 = 0;
+          traitStep6 = traitStep6 + 3;
+          if (traitStep6 > group1[6].length - 1) traitStep6 = 0;
+          traitStep7 = traitStep7 + 3;
+          if (traitStep7 > group1[7].length - 1) traitStep7 = 0;
+          questionAsked.push({ trait_number: 1, ques_index: traitStep1 });
+          questionAsked.push({ trait_number: 2, ques_index: traitStep2 });
+          questionAsked.push({ trait_number: 3, ques_index: traitStep3 });
+          questionAsked.push({ trait_number: 4, ques_index: traitStep4 });
+          questionAsked.push({ trait_number: 5, ques_index: traitStep5 });
+          questionAsked.push({ trait_number: 6, ques_index: traitStep6 });
+          questionAsked.push({ trait_number: 7, ques_index: traitStep7 });
+        }
+
+        for (let i = 0; i < questionAsked.length; i++) {
+          let item = {
+            trait_number: questionAsked[i]["trait_number"],
+            ques_index: questionAsked[i]["ques_index"],
+            user_name: name,
+            user_id: userID,
+            LinkedItemsToAdd: [`Personality Profiles/${personalityID}`],
+          };
+
+          axios({
+            method: "POST",
+            url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/All/items`,
+            data: JSON.stringify(item),
             headers: {
               Authorization: "Bearer " + this.props.location.state.name,
+              "Content-Type": "application/json",
             },
           });
         }
-      } else {
-        while (1) {
-          traitStep1 = parseInt(Math.random() * (group1[1].length - 8) + 0);
-          dataCheck = filtered.filter((data) => {
-            return data.QuesIndex == traitStep1 && data.trait_number == 1;
-          });
-          if (!dataCheck.length) break;
-        }
-      }
 
-      //trait2
-      traitStep2 = parseInt(Math.random() * (group1[2].length - 8) + 0);
-      let existingTrait2 = filtered.filter(function (el) {
-        return el.trait_number == 2;
-      });
-
-      if (traitStep2.length > group1[2].length - 9) {
-        for (let q = 0; q < existingTrait2.length; q++) {
-          let itemID = existingTrait2[q]["id"];
-          await axios({
-            method: "DELETE",
-            url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
-            headers: {
-              Authorization: "Bearer " + this.props.location.state.name,
-            },
-          });
-        }
-      } else {
-        while (1) {
-          traitStep2 = parseInt(Math.random() * (group1[2].length - 8) + 0);
-          dataCheck = filtered.filter((data) => {
-            return data.QuesIndex == traitStep2 && data.trait_number == 2;
-          });
-          if (!dataCheck.length) break;
-        }
-      }
-
-      //trait3
-      traitStep3 = parseInt(Math.random() * (group1[3].length - 8) + 0);
-      let existingTrait3 = filtered.filter(function (el) {
-        return el.trait_number == 3;
-      });
-
-      if (traitStep3.length > group1[3].length - 9) {
-        for (let q = 0; q < existingTrait3.length; q++) {
-          let itemID = existingTrait3[q]["id"];
-          await axios({
-            method: "DELETE",
-            url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
-            headers: {
-              Authorization: "Bearer " + this.props.location.state.name,
-            },
-          });
-        }
-      } else {
-        while (1) {
-          traitStep3 = parseInt(Math.random() * (group1[3].length - 8) + 0);
-          dataCheck = filtered.filter((data) => {
-            return data.QuesIndex == traitStep3 && data.trait_number == 3;
-          });
-          if (!dataCheck.length) break;
-        }
-      }
-
-      //trait4
-      traitStep4 = parseInt(Math.random() * (group1[4].length - 8) + 0);
-      let existingTrait4 = filtered.filter(function (el) {
-        return el.trait_number == 4;
-      });
-
-      if (traitStep4.length > group1[4].length - 9) {
-        for (let q = 0; q < existingTrait4.length; q++) {
-          let itemID = existingTrait4[q]["id"];
-          await axios({
-            method: "DELETE",
-            url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
-            headers: {
-              Authorization: "Bearer " + this.props.location.state.name,
-            },
-          });
-        }
-      } else {
-        while (1) {
-          traitStep4 = parseInt(Math.random() * (group1[4].length - 8) + 0);
-          dataCheck = filtered.filter((data) => {
-            return data.QuesIndex == traitStep4 && data.trait_number == 4;
-          });
-          if (!dataCheck.length) break;
-        }
-      }
-
-      //trait5
-      traitStep5 = parseInt(Math.random() * (group1[5].length - 8) + 0);
-      let existingTrait5 = filtered.filter(function (el) {
-        return el.trait_number == 5;
-      });
-
-      if (traitStep5.length > group1[5].length - 9) {
-        for (let q = 0; q < existingTrait5.length; q++) {
-          let itemID = existingTrait5[q]["id"];
-          await axios({
-            method: "DELETE",
-            url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
-            headers: {
-              Authorization: "Bearer " + this.props.location.state.name,
-            },
-          });
-        }
-      } else {
-        while (1) {
-          traitStep5 = parseInt(Math.random() * (group1[5].length - 8) + 0);
-          dataCheck = filtered.filter((data) => {
-            return data.QuesIndex == traitStep5 && data.trait_number == 5;
-          });
-          if (!dataCheck.length) break;
-        }
-      }
-
-      //trait6
-      traitStep6 = parseInt(Math.random() * (group1[6].length - 8) + 0);
-
-      let existingTrait6 = filtered.filter(function (el) {
-        return el.trait_number == 6;
-      });
-
-      if (traitStep6.length > group1[6].length - 9) {
-        for (let q = 0; q < existingTrait6.length; q++) {
-          let itemID = existingTrait6[q]["id"];
-          await axios({
-            method: "DELETE",
-            url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
-            headers: {
-              Authorization: "Bearer " + this.props.location.state.name,
-            },
-          });
-        }
-      } else {
-        while (1) {
-          traitStep6 = parseInt(Math.random() * (group1[6].length - 8) + 0);
-          dataCheck = filtered.filter((data) => {
-            return data.QuesIndex == traitStep6 && data.trait_number == 6;
-          });
-          if (!dataCheck.length) break;
-        }
-      }
-
-      //trit7
-      traitStep7 = parseInt(Math.random() * (group1[7].length - 8) + 0);
-      let existingTrait7 = filtered.filter(function (el) {
-        return el.trait_number == 7;
-      });
-
-      if (traitStep7.length > group1[7].length - 9) {
-        for (let q = 0; q < existingTrait7.length; q++) {
-          let itemID = existingTrait7[q]["id"];
-          await axios({
-            method: "DELETE",
-            url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/items/${itemID}`,
-            headers: {
-              Authorization: "Bearer " + this.props.location.state.name,
-            },
-          });
-        }
-      } else {
-        while (1) {
-          traitStep7 = parseInt(Math.random() * (group1[7].length - 8) + 0);
-          dataCheck = filtered.filter((data) => {
-            return data.QuesIndex == traitStep7 && data.trait_number == 7;
-          });
-          if (!dataCheck.length) break;
-        }
-      }
-
-      let questionAsked = [];
-      let questions = [];
-      for (let i = 0; i < 3; i++) {
-        questions.push(group1[1][traitStep1]);
-        questions.push(group1[2][traitStep2]);
-        questions.push(group1[3][traitStep3]);
-        questions.push(group1[4][traitStep4]);
-        questions.push(group1[5][traitStep5]);
-        questions.push(group1[6][traitStep6]);
-        questions.push(group1[7][traitStep7]);
-        traitStep1 = traitStep1 + 3;
-        traitStep2 = traitStep2 + 3;
-        traitStep3 = traitStep3 + 3;
-        traitStep4 = traitStep4 + 3;
-        traitStep5 = traitStep5 + 3;
-        traitStep6 = traitStep6 + 3;
-        traitStep7 = traitStep7 + 3;
-        questionAsked.push({ trait_number: 1, ques_index: traitStep1 });
-        questionAsked.push({ trait_number: 2, ques_index: traitStep2 });
-        questionAsked.push({ trait_number: 3, ques_index: traitStep3 });
-        questionAsked.push({ trait_number: 4, ques_index: traitStep4 });
-        questionAsked.push({ trait_number: 5, ques_index: traitStep5 });
-        questionAsked.push({ trait_number: 6, ques_index: traitStep6 });
-        questionAsked.push({ trait_number: 7, ques_index: traitStep7 });
-      }
-
-      for (let i = 0; i < questionAsked.length; i++) {
-        let item = {
-          trait_number: questionAsked[i]["trait_number"],
-          ques_index: questionAsked[i]["ques_index"],
-          user_name: name,
-        };
-
-        axios({
-          method: "POST",
-          url: `https://dev.rapidplatform.com.au/api/rapidplatform/personalitytrait/lists/Traits/All/items`,
-          data: JSON.stringify(item),
-          headers: {
-            Authorization: "Bearer " + this.props.location.state.name,
-            "Content-Type": "application/json",
-          },
+        this.setState({
+          pause: false,
+          questions: questions,
+          user_id: userID,
+          personality_id: personalityID,
         });
       }
-
-      this.setState({ pause: false, questions: questions });
+    } else {
+      this.setState({
+        personality_existence: true,
+      });
     }
   }
 
@@ -497,6 +572,10 @@ class Form extends Component {
           facet: result[0].facet,
           respondant: this.props.location.state.token,
           score: score,
+          user_id: this.state.user_id,
+          LinkedItemsToAdd: [
+            `Personality Profiles/${this.state.personality_id}`,
+          ],
         });
       }
 
@@ -587,6 +666,8 @@ class Form extends Component {
         name: this.props.location.state.token,
         trait: profile,
         answer_date: new Date(),
+        user_id: this.state.user_id,
+        LinkedItemsToAdd: [`Personality Profiles/${this.state.personality_id}`],
       };
 
       await axios({
@@ -615,6 +696,9 @@ class Form extends Component {
   };
 
   render() {
+    if (this.state.personality_existence) {
+      return <p className="titleCen">Personality Profile is not found.</p>;
+    }
     if (this.state.pause) {
       return (
         <Overlay>
